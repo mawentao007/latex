@@ -1,0 +1,38 @@
+\documentclass[a4paper,10pt]{article}
+%\documentclass[a4paper,10pt]{scrartcl}
+
+\usepackage[utf8]{inputenc}
+\usepackage[colorlinks,linkcolor=red,anchorcolor=blue,citecolor=green]{hyperref}
+\usepackage{CJK}
+\usepackage{verbatim}
+
+
+\title{Redis}
+\author{Marvin}
+\date{}
+
+\pdfinfo{%
+  /Title    ()
+  /Author   ()
+  /Creator  ()
+  /Producer ()
+  /Subject  ()
+  /Keywords ()
+}
+
+\begin{document}
+
+\begin{CJK*}{UTF8}{gkai}
+
+\newpage
+\section{chapter 1}
+\item
+first
+\item
+second
+
+
+
+\end{CJK*}
+
+\end{document}

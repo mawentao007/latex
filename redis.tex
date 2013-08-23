@@ -30,7 +30,236 @@
 
 \begin{CJK*}{UTF8}{gkai}
 \begin{verbatim}
+header  <sys/time.h>
+timeval{
+	time_t tv_sec;//毫秒
+	suseconds_t tv_usec;  //微秒
+}
+
+
+
+
+双链表结构
+typedef struct listNode {
+    struct listNode *prev;
+    struct listNode *next;
+    void *value;
+} listNode;
+
+typedef struct listIter {
+    listNode *next;
+    int direction;
+} listIter;
+
+typedef struct list {
+    listNode *head;
+    listNode *tail;
+    void *(*dup)(void *ptr);
+    void (*free)(void *ptr);
+    int (*match)(void *ptr, void *key);
+    unsigned long len;
+} list;
+
+
+字典结构
+typedef struct dictEntry {
+    void *key;
+    union {
+        void *val;
+        uint64_t u64;
+        int64_t s64;
+    } v;
+    struct dictEntry *next;
+} dictEntry;
+
+typedef struct dictType {
+    unsigned int (*hashFunction)(const void *key);
+    void *(*keyDup)(void *privdata, const void *key);
+    void *(*valDup)(void *privdata, const void *obj);
+    int (*keyCompare)(void *privdata, const void *key1, const void *key2);
+    void (*keyDestructor)(void *privdata, void *key);
+    void (*valDestructor)(void *privdata, void *obj);
+} dictType;
+
+
+
+typedef struct dictht {
+    dictEntry **table;
+    unsigned long size;
+    unsigned long sizemask;                //长度掩码，用于计算索引
+    unsigned long used;
+} dictht;
+
+typedef struct dict {
+    dictType *type;
+    void *privdata;
+    dictht ht[2];
+    int rehashidx; /* rehashing not in progress if rehashidx == -1 */
+    int iterators; /* number of iterators currently running */
+} dict;
+
+
+typedef struct dictIterator {
+    dict *d;
+    int table, index, safe;
+    dictEntry *entry, *nextEntry;
+} dictIterator;
+
+
+sds数据结构
+typedef char *sds;
+
+struct sdshdr {
+    int len;
+    int free;
+    char buf[];
+};
+
+static inline size_t sdslen(const sds s) {
+    struct sdshdr *sh = (void*)(s-(sizeof(struct sdshdr)));
+    return sh->len;
+}
+
+static inline size_t sdsavail(const sds s) {
+    struct sdshdr *sh = (void*)(s-(sizeof(struct sdshdr)));
+    return sh->free;
+}
+
+
+
+
+
+
+
+
+
+
+服务器端处理请求：
+事件循环结构：
+itypedef struct aeEventLoop {
+    int maxfd;   /* highest file descriptor currently registered */
+    int setsize; /* max number of file descriptors tracked */
+    long long timeEventNextId;   //生成事件id
+    time_t lastTime;     /* Used to detect system clock skew */
+    aeFileEvent *events; /* Registered events 已经注册的文件事件*/
+    aeFiredEvent *fired; /* Fired events 已就绪的文件事件*/
+    aeTimeEvent *timeEventHead;       //时间事件
+    int stop;                         //事件处理器开关
+    void *apidata; /* This is used for polling API specific data */
+    aeBeforeSleepProc *beforesleep;     //处理事件前要执行函数
+} aeEventLoop;
+
+//File event structure
+typedef struct aeFileEvent {
+    int mask; /* one of AE_(READABLE|WRITABLE) */
+    aeFileProc *rfileProc;
+    aeFileProc *wfileProc;
+    void *clientData;
+} aeFileEvent;
+
+/* Time event structure */
+typedef struct aeTimeEvent {
+    long long id; /* time event identifier. */
+    long when_sec; /* seconds */
+    long when_ms; /* milliseconds */
+    aeTimeProc *timeProc;   //事件处理函数
+    aeEventFinalizerProc *finalizerProc;        //事件释放函数
+    void *clientData;
+    struct aeTimeEvent *next;          //指针
+} aeTimeEvent;
+
+/* A fired event */
+typedef struct aeFiredEvent {
+    int fd;							//已就绪文件描述符
+    int mask;                       //事件类型掩码
+} aeFiredEvent;
+
+
+aeMain(redis.c 2721)->aeProcessEvents->
+fe->rfileProc(eventLoop,fd,fe->clientData,mask)指向readQueryFromClient->
+processInputBuffer->processCommand;
+基本流程是从客户端读取数据到缓冲区，执行缓冲区内的命令
+
+
+
+
+
+
+typedef struct redisObject {
+    unsigned type:4;                 //用来存储string，list和set
+									 //位段数据类型
+    unsigned notused:2;     /* Not used */
+    unsigned encoding:4;
+    unsigned lru:22;        /* lru time (relative to server.lruclock) */
+    int refcount;
+    void *ptr;
+} robj;
+
+
+typedef struct redisDb {
+    dict *dict;                 /* The keyspace for this DB */
+    dict *expires;              /* Timeout of keys with a timeout set */
+    dict *blocking_keys;        /* Keys with clients waiting for data (BLPOP) */
+    dict *ready_keys;           /* Blocked keys that received a PUSH */
+    dict *watched_keys;         /* WATCHED keys for MULTI/EXEC CAS */
+    int id;
+} redisDb;
+
+
+
+typedef void redisCommandProc(redisClient *c);
+typedef int *redisGetKeysProc(struct redisCommand *cmd, robj **argv,
+		int argc, int *numkeys, int flags);
+
+struct redisCommand {
+    char *name;
+    redisCommandProc *proc;
+    int arity;
+    char *sflags; /* Flags as string representation, one char per flag. */
+    int flags;    /* The actual flags, obtained from the 'sflags' field. */
+    /* Use a function to determine keys arguments in a command line. */
+    redisGetKeysProc *getkeys_proc;
+    /* What keys should be loaded in background when calling this command? */
+    int firstkey; /* The first argument that's a key (0 = no keys) */
+    int lastkey;  /* The last argument that's a key */
+    int keystep;  /* The step between first and last key */
+    long long microseconds, calls;
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+客户端初始化部分
 redisContext *redisContextInit(void)函数初始化：
+
 static redisContext *redisContextInit(void) {
     redisContext *c;
 
